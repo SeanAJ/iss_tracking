@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import numpy as np
+import math
 #import geopandas as gpd
 #import geodatasets
 #import shapely.geometry
@@ -10,8 +11,8 @@ import numpy as np
 #worldmap = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
 #world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
-hlon = 48.4284
-hlat = -123.3656
+hlat = 48.4284
+hlon = -123.3656
 
 #convert home location
 hlat, hlon = np.deg2rad(hlat), np.deg2rad(hlon)
@@ -50,6 +51,27 @@ while True:
     print(f"x: {x}")
     print(f"y: {y}")
     print(f"z: {z}")
+
+    X = np.cos(lat) * np.sin(lon-hlon)
+    Y = np.cos(hlat) * np.sin(lat) - np.sin(hlat) * np.cos(lat) * np.cos(lon-hlon)
+    B = math.atan2(X,Y)
+    B = np.rad2deg(B)
+
+    print(f"B: {B}")
+    #Calculate the distance from the observer to the nadir of the iss
+    ON = np.sqrt(((x - x_h)**2) + ((y- y_h)**2) + ((z - z_h)**2))
+    print(f"nadir: {ON}")
+    # Calculate the geocentric angle
+    GA = 2 * math.asin(ON/(2 * R))
+    print(f"Geocentric angle: {GA}")
+    #calculate the distance from the observer up to the ISS
+    c = np.sqrt(((alt + R)**2) + (R**2) - (2*(alt + R) * R * np.cos(GA)))
+    print(f"Distance from observer to the iss: {c}")
+    #calculate the angle from the observer to the iss
+    OA = math.asin((alt + R) * (np.sin(GA)/c))
+    OAD = np.rad2deg(OA)
+    print(f"angle  from observer to iss: {OAD}")
+    
 
     iteration += 1
     print (iteration)
