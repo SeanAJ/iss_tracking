@@ -3,13 +3,6 @@ import json
 import time
 import numpy as np
 import math
-#import geopandas as gpd
-#import geodatasets
-#import shapely.geometry
-#import matplotlib.pyplot as plt
-
-#worldmap = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
-#world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
 
 hlat = 48.4284
 hlon = -123.3656
@@ -50,6 +43,11 @@ while True:
     Y = np.cos(hlat) * np.sin(lat) - np.sin(hlat) * np.cos(lat) * np.cos(lon-hlon)
     B = math.atan2(X,Y)
     B = np.rad2deg(B)
+    Bdeg = B
+    if B < 0:
+        Bdeg = B % 360
+    print(f"Bdeg: {Bdeg}")
+
 
     print(f"B: {B}")
     #Calculate the distance from the observer to the nadir of the iss
@@ -64,10 +62,12 @@ while True:
     #calculate the angle from the observer to the iss
     OA = math.asin((alt + R) * (np.sin(GA)/c))
     OAD = np.rad2deg(OA)
+    if OAD < 0:
+        OAD = OAD % 360
     print(f"angle  from observer to iss: {OAD}")
     
     iteration += 1
     print (iteration)
-    if iteration == 1:
+    if iteration == 4:
         break
     time.sleep(5)
