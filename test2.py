@@ -1,73 +1,79 @@
 import requests
 import json
 import time
-import numpy as np
 import math
 
 hlat = 48.4284
 hlon = -123.3656
-
-#convert home location
-hlat, hlon = np.deg2rad(hlat), np.deg2rad(hlon)
 R = 6371 # radius of the earth
-x_h = R * np.cos(hlat) * np.cos(hlon)
-y_h = R * np.cos(hlat) * np.sin(hlon)
-z_h = R *np.sin(hlat)
-print(f"home x: {round(x_h, 2)}, home y: {round(y_h, 2)}, home z: {round(z_h, 2)}")
 
-iteration = 0
-while True:
-    response = requests.get("https://api.wheretheiss.at/v1/satellites/25544")
-    data = response.json()
-    #print(data)
-    lon = float(data['longitude'])
-    lat = float(data['latitude'])
-    alt = float(data['altitude'])
-    #lon = float(input("longitude:"))
-    #lat = float(input("latitude: "))
-    #alt = 0
-    print(f"longitude: {lon}")
-    print(f"latitude: {lat}")
-    print(f"altitude: {alt}")
+def deg2rad(deg):
+    return deg * (math.pi/180)
 
-    lat, lon = np.deg2rad(lat), np.deg2rad(lon)
-    R = 6371 # radius of the earth
-    x = R * np.cos(lat) * np.cos(lon)
-    y = R * np.cos(lat) * np.sin(lon)
-    z = R *np.sin(lat)
-    print(f"x: {round(x, 2)}")
-    print(f"y: {round(y, 2)}")
-    print(f"z: {round(z, 2)}")
+def rad2deg(rad):
+    return rad * (180/math.pi)
 
-    X = np.cos(lat) * np.sin(lon-hlon)
-    Y = np.cos(hlat) * np.sin(lat) - np.sin(hlat) * np.cos(lat) * np.cos(lon-hlon)
+def get_iss_data(): #function to call the ISS api and assign return variables
+    while True:
+        try:
+            response = requests.get("https://api.wheretheiss.at/v1/satellites/25544")
+            data = response.json()
+            lon = float(data['longitude'])
+            lat = float(data['latitude'])
+            alt = float(data['altitude'])
+            break
+        except Exception:
+            print("error")
+            time.sleep(5)
+    return lat,lon,alt
+
+def get_bearing(lat, lon, hlon, hlat): #function to calculate the bearing from the observer to the iss
+    lat, lon, hlon, hlat = deg2rad(lat), deg2rad(lon), deg2rad(hlon), deg2rad(hlat)
+    X = math.cos(lat) * math.sin(lon-hlon)
+    Y = math.cos(hlat) * math.sin(lat) - math.sin(hlat) * math.cos(lat) * math.cos(lon-hlon)
     B = math.atan2(X,Y)
-    B = np.rad2deg(B)
+    B = rad2deg(B)
     Bdeg = B
     if B < 0:
         Bdeg = B % 360
-    print(f"Bdeg: {Bdeg}")
+    return Bdeg
+
+def cartesian_conversion(lat, lon, alt): #convert the lattitude and longitude into cartesian quardinates to use in the trig calculation.
+    lat, lon = deg2rad(lat), deg2rad(lon)
+    x = R * math.cos(lat) * math.cos(lon)
+    y = R * math.cos(lat) * math.sin(lon)
+    z = R *math.sin(lat)
+    return x, y ,z
 
 
-    print(f"B: {B}")
-    #Calculate the distance from the observer to the nadir of the iss
-    ON = np.sqrt(((x - x_h)**2) + ((y - y_h)**2) + ((z - z_h)**2))
-    print(f"nadir: {ON}")
-    # Calculate the geocentric angle
+
+def get_angle(x, y, z, h_x, h_y, h_z): #function to get the vertical angle to the iss
+    ON = math.sqrt(((x - x_h)**2) + ((y - y_h)**2) + ((z - z_h)**2))
     GA = 2 * math.asin(ON/(2 * R))
-    print(f"Geocentric angle: {GA}")
-    #calculate the distance from the observer up to the ISS
-    c = np.sqrt(((alt + R)**2) + (R**2) - (2*(alt + R) * R * np.cos(GA)))
-    print(f"Distance from observer to the iss: {c}")
-    #calculate the angle from the observer to the iss
-    OA = math.asin((alt + R) * (np.sin(GA)/c))
-    OAD = np.rad2deg(OA)
+    c = math.sqrt(((alt + R)**2) + (R**2) - (2*(alt + R) * R * math.cos(GA)))
+    OA = math.asin((alt + R) * (math.sin(GA)/c))
+    OAD = rad2deg(OA)
     if OAD < 0:
         OAD = OAD % 360
-    print(f"angle  from observer to iss: {OAD}")
+    return OAD
+
+    
+x_h, y_h, z_h = cartesian_conversion(hlat,hlon, 0)
+
+iteration = 0
+while True:
+    lat, lon, alt = get_iss_data()
+
+    x, y, z = cartesian_conversion(lat, lon, alt)
+
+    Bdeg = get_bearing(lat, lon, hlon, hlat)
+    print(f"Bdeg: {round(Bdeg, 2)}")
+
+    OAD = get_angle(x, y, z, x_h, y_h, z_h)
+    print(f"angle to the iss: {round(OAD, 2)}")
     
     iteration += 1
     print (iteration)
-    if iteration == 4:
+    if iteration == 1:
         break
     time.sleep(5)
