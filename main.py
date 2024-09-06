@@ -74,6 +74,6 @@ while True:
     
     iteration += 1
     print (iteration)
-    if iteration == 1:
+    if iteration == 4:
         break
     time.sleep(5)
