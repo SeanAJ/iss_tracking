@@ -10,8 +10,8 @@ import math
 import stepper
 from servo import Servo
 
-ssid = 'TELUS1079'
-password = 'mr4f6xvfaa'
+ssid = ''
+password = ''
 
 def connect():
     #Connect to WLAN
