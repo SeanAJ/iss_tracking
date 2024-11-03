@@ -1,11 +1,44 @@
+import network
+import socket
+from time import sleep
+from picozero import pico_temp_sensor, pico_led
+import machine
 import requests
 import json
 import time
 import math
+import stepper
+from servo import Servo
 
+ssid = 'TELUS1079'
+password = 'mr4f6xvfaa'
+
+def connect():
+    #Connect to WLAN
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(ssid, password)
+    while wlan.isconnected() == False:
+        print('Waiting for connection...')
+        sleep(1)
+    ip = wlan.ifconfig()[0]
+    print(f'Connected on {ip}')
+    return ip
+
+
+try:
+    ip = connect()
+except KeyboardInterrupt:
+    machine.reset()
+    
 hlat = 48.4284
 hlon = -123.3656
 R = 6371 # radius of the earth
+IN1 = 2
+IN2 = 3
+IN3 = 4
+IN4 = 5
+my_servo = Servo(pin_id=6)
 
 def deg2rad(deg):
     return deg * (math.pi/180)
@@ -55,12 +88,18 @@ def get_angle(x, y, z, h_x, h_y, h_z, R): #function to get the vertical angle to
     OAD = rad2deg(OA)
     if OAD < 0:
         OAD = OAD % 360
+    if OAD > 180:
+        OAD = 360 - OAD
     return OAD
 
     
 x_h, y_h, z_h = cartesian_conversion(hlat,hlon, 0, R)
 
 iteration = 0
+led = machine.Pin("LED", machine.Pin.OUT)
+led.on()
+stepper_motor = stepper.HalfStepMotor.frompins(IN1, IN2, IN3, IN4)
+stepper_motor.reset()
 while True:
     lat, lon, alt = get_iss_data()
 
@@ -72,8 +111,13 @@ while True:
     OAD = get_angle(x, y, z, x_h, y_h, z_h, R)
     print(f"angle to the iss: {round(OAD, 2)}")
     
-    iteration += 1
-    print (iteration)
-    if iteration == 4:
-        break
-    time.sleep(5)
+    stepper_motor.step_until_angle(Bdeg)
+    my_servo.write(OAD)
+
+
+    
+    #iteration += 1
+    #print (iteration)
+    #if iteration == 4:
+    #    break
+    time.sleep(1)
